@@ -21,6 +21,13 @@ export function PlayScreen({ categoryKey, word, turnTimeLeft, turnSeconds, wordT
   const cat = categoryMeta(categoryKey);
   const text = word?.kind === 'word' ? word.text : '';
 
+  // On a Random turn each word still comes from a real category, so the
+  // word itself takes that category's colour and names it. The turn-level
+  // chrome (label, ring, button) stays Random-slate so the screen doesn't
+  // restyle itself every few seconds.
+  const source = categoryKey === 'random' && word?.kind === 'word' ? categoryMeta(word.category) : null;
+  const wordColor = source ? source.color : cat.color;
+
   return (
     <div className="screen" style={{ position: 'relative', padding: '22px 26px 30px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -30,20 +37,27 @@ export function PlayScreen({ categoryKey, word, turnTimeLeft, turnSeconds, wordT
       <TurnTimerBar pct={(turnTimeLeft / turnSeconds) * 100} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 22, width: '100%' }}>
         <WordTimerRing timeLeft={wordTimeLeft} timeLimit={wordTimeLimit} strokeColor={cat.color} />
-        <div
-          style={{
-            width: '100%',
-            fontFamily: 'var(--font-serif)',
-            fontWeight: 700,
-            fontSize: fitSize(text, 58),
-            lineHeight: 1.08,
-            textAlign: 'center',
-            textWrap: 'balance',
-            overflowWrap: 'normal',
-            color: cat.color,
-          }}
-        >
-          {text}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, width: '100%' }}>
+          {source && (
+            <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 800, fontSize: 13, letterSpacing: '0.16em', textTransform: 'uppercase', color: source.color }}>
+              {source.label}
+            </span>
+          )}
+          <div
+            style={{
+              width: '100%',
+              fontFamily: 'var(--font-serif)',
+              fontWeight: 700,
+              fontSize: fitSize(text, 58),
+              lineHeight: 1.08,
+              textAlign: 'center',
+              textWrap: 'balance',
+              overflowWrap: 'normal',
+              color: wordColor,
+            }}
+          >
+            {text}
+          </div>
         </div>
       </div>
       <div style={{ display: 'flex', gap: 14, width: '100%' }}>

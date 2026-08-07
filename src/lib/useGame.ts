@@ -15,8 +15,10 @@ import {
   finishGame,
   logTurnEvent,
   recordBestScoreIfHigher,
+  reportWord,
   saveGroupLastTeams,
   setTurnEventFlag,
+  unreportWord,
   upsertPlayer,
   type GroupRoster,
 } from './persistence';
@@ -441,8 +443,11 @@ export function useGame() {
       doubled,
       isAllplay: wasAllplay,
       flagged: false,
+      reported: false,
+      reportId: null,
       scoredTeamIdx: wasCorrect ? targetIdx : null,
       category: s.categoryKey!,
+      sourceCategory: cw.kind === 'word' ? cw.category : null,
       wordId: cw.kind === 'word' ? cw.id : null,
       songId: cw.kind === 'song' ? cw.id : null,
     };
@@ -479,6 +484,46 @@ export function useGame() {
       } catch (e) {
         console.error(e);
       }
+    }
+  }, [patch]);
+
+  // Report a word as impossible/too obscure. Available on every row
+  // regardless of outcome — an auto-skipped word is the likeliest candidate
+  // — and has no effect on the score.
+  const toggleReport = useCallback(async (index: number) => {
+    const s = stateRef.current;
+    const w = { ...s.turnWords[index] };
+    if (!w.wordId && !w.songId) return;
+
+    const wasReported = w.reported;
+    const words = s.turnWords.slice();
+    // Flip optimistically so the tap feels instant, then reconcile.
+    words[index] = { ...w, reported: !wasReported };
+    patch({ turnWords: words });
+
+    try {
+      if (wasReported) {
+        if (w.reportId) await unreportWord(w.reportId);
+        patch((prev) => {
+          const next = prev.turnWords.slice();
+          next[index] = { ...next[index], reported: false, reportId: null };
+          return { turnWords: next };
+        });
+      } else {
+        const reportId = await reportWord({ wordId: w.wordId, songId: w.songId, gameId: s.gameId });
+        patch((prev) => {
+          const next = prev.turnWords.slice();
+          next[index] = { ...next[index], reported: true, reportId };
+          return { turnWords: next };
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      patch((prev) => {
+        const next = prev.turnWords.slice();
+        next[index] = { ...next[index], reported: wasReported };
+        return { turnWords: next, error: `Couldn't save that report: ${errorMessage(e)}` };
+      });
     }
   }, [patch]);
 
@@ -574,6 +619,7 @@ export function useGame() {
     handleSkip,
     handleAllplayCorrect,
     toggleFlag,
+    toggleReport,
     confirmSummary,
     endGameEarly,
     nextTurn,

@@ -127,7 +127,9 @@ export default function App() {
         );
         break;
       case 'summary':
-        content = currentTeam && <SummaryScreen team={currentTeam} turnWords={s.turnWords} onToggleFlag={g.toggleFlag} onConfirm={g.confirmSummary} />;
+        content = currentTeam && (
+          <SummaryScreen team={currentTeam} turnWords={s.turnWords} onToggleFlag={g.toggleFlag} onToggleReport={g.toggleReport} onConfirm={g.confirmSummary} />
+        );
         break;
       case 'scoreboard':
         content = s.mode && (

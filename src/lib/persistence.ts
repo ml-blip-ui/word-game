@@ -121,6 +121,24 @@ export async function recordBestScoreIfHigher(
   return true;
 }
 
+// Reporting a word as impossible/obscure. Nothing to do with turn_events
+// .flagged (a said-the-word slip) — this has no scoring effect and only
+// feeds the curation list.
+export async function reportWord(target: { wordId: string | null; songId: string | null; gameId: string | null }): Promise<string> {
+  const { data, error } = await supabase
+    .from('word_reports')
+    .insert({ word_id: target.wordId, song_id: target.songId, game_id: target.gameId })
+    .select('id')
+    .single();
+  if (error) throw error;
+  return data.id;
+}
+
+export async function unreportWord(reportId: string): Promise<void> {
+  const { error } = await supabase.from('word_reports').delete().eq('id', reportId);
+  if (error) throw error;
+}
+
 export interface GroupMember {
   id: string;
   name: string;

@@ -48,9 +48,12 @@ export interface TurnWordEntry {
   outcome: 'correct' | 'skip' | 'auto_skip';
   doubled: boolean;
   isAllplay: boolean;
-  flagged: boolean;
+  flagged: boolean; // said-the-word slip: point reversed and penalised
+  reported: boolean; // "this word is impossible" — no scoring effect
+  reportId: string | null;
   scoredTeamIdx: number | null;
-  category: CategoryKey;
+  category: CategoryKey; // the turn's category (may be 'random')
+  sourceCategory: CategoryKey | null; // where the word actually came from
   wordId: string | null;
   songId: string | null;
 }

@@ -15,6 +15,7 @@ intent — they're the source of truth for *why* things work the way they do.
 2. Open **SQL Editor** and run, in order:
    - `supabase/migrations/0001_init.sql` — tables, RPC functions, RLS policies, the stats view.
    - `supabase/migrations/0002_groups.sql` — groups (persistent named rosters, e.g. "Grups and Chiddlers").
+   - `supabase/migrations/0003_fix_draw_word.sql`, `0004_security_definer_draws.sql`, `0005_word_reports.sql` — fixes and the reported-words table.
    - `supabase/seed/seed_data.sql` — loads the ~7,500 words and 800 songs.
 3. Under **Project Settings → API**, copy the **Project URL** and **anon / publishable** key.
 
@@ -57,6 +58,25 @@ count and who's on which team are still decided fresh each game (drag the
 however the group split last time. Deliberately no group-level scoreboard —
 kept to roster + last split only, to avoid turning a holiday game into a
 running competition.
+
+## Curating the word bank
+
+The turn summary has a ⚑ button on every word. That reports the word as
+impossible or too obscure — deliberately separate from tapping the row
+itself, which flags a *slip* (someone said the word) and reverses the
+point. Reporting has no effect on scoring.
+
+To review what's been reported, run this in the Supabase SQL Editor:
+
+```sql
+select * from reported_words;
+```
+
+Worst offenders come first. To retire one:
+
+```sql
+delete from words where id = '<target_id>';
+```
 
 ## Notes on categories
 

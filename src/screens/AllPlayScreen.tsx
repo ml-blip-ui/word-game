@@ -19,6 +19,10 @@ interface AllPlayScreenProps {
 export function AllPlayScreen({ categoryKey, word, turnTimeLeft, turnSeconds, wordTimeLeft, wordTimeLimit, teams, onCorrect, onSkip }: AllPlayScreenProps) {
   const cat = categoryMeta(categoryKey);
   const text = word?.kind === 'word' ? word.text : '';
+  // The all-play card is a full bleed of the category colour, so the word
+  // stays cream here — a sage or ochre word on a slate card would be
+  // muddy. On a Random turn the source category is named instead.
+  const source = categoryKey === 'random' && word?.kind === 'word' ? categoryMeta(word.category) : null;
 
   return (
     <div className="screen" style={{ padding: '22px 24px 28px', background: cat.color, textAlign: 'center' }}>
@@ -29,6 +33,11 @@ export function AllPlayScreen({ categoryKey, word, turnTimeLeft, turnSeconds, wo
       <TurnTimerBar pct={(turnTimeLeft / turnSeconds) * 100} fillColor="oklch(0.99 0.01 80 / 0.75)" trackColor="oklch(0.28 0.03 50 / 0.25)" />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18, width: '100%' }}>
         <WordTimerRing timeLeft={wordTimeLeft} timeLimit={wordTimeLimit} size={72} strokeColor="var(--cream-bright)" trackColor="oklch(0.28 0.03 50 / 0.25)" textColor="var(--cream-bright)" />
+        {source && (
+          <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 800, fontSize: 13, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'oklch(0.99 0.01 80 / 0.8)', marginBottom: -8 }}>
+            {source.label}
+          </span>
+        )}
         <div style={{ width: '100%', fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: fitSize(text, 58), lineHeight: 1.08, textWrap: 'balance', overflowWrap: 'normal', color: 'var(--cream-bright)' }}>
           {text}
         </div>
