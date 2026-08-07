@@ -24,7 +24,7 @@ export function RoundLengthScreen({ turnSeconds, onBack, onSet, onContinue }: Ro
               padding: 22,
               borderRadius: '20px 15px 22px 16px',
               border: '2.2px solid var(--ink)',
-              background: turnSeconds === n ? 'var(--ink)' : 'var(--surface)',
+              background: turnSeconds === n ? 'var(--gradient-subtle-2)' : 'var(--surface)',
               color: turnSeconds === n ? 'var(--cream)' : 'var(--ink)',
               fontWeight: 800,
               fontSize: 20,

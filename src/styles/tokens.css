@@ -41,6 +41,13 @@
   --gradient-6: linear-gradient(135deg, oklch(0.58 0.16 345) 0%, oklch(0.56 0.14 315) 55%, oklch(0.52 0.13 280) 100%); /* rose-red -> plum -> violet */
   --gradient-primary: var(--gradient-1);
 
+  /* Quiet counterpart for selection chips (round length, win condition) —
+     same hue families as the matching CTA gradient, but dark and
+     low-chroma so it reads as "ink with a whisper of colour" rather than
+     a second loud gradient competing with the actual call to action. */
+  --gradient-subtle-2: linear-gradient(135deg, oklch(0.33 0.05 105), oklch(0.29 0.045 40));
+  --gradient-subtle-6: linear-gradient(135deg, oklch(0.33 0.05 345), oklch(0.29 0.045 280));
+
   --font-serif: 'Corben', serif;
   --font-sans: 'Manrope', sans-serif;
 }
