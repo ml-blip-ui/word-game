@@ -1,0 +1,94 @@
+@import url('https://fonts.googleapis.com/css2?family=Corben:wght@400;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import './tokens.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--page-behind);
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font-family: var(--font-sans);
+}
+
+.app-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.card {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--bg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 480px) {
+  .card {
+    height: min(840px, 100dvh);
+    border-radius: 22px 20px 24px 18px;
+    border: 2px solid oklch(0.3 0.03 50 / 0.4);
+  }
+  .app-shell {
+    padding: 28px 12px;
+  }
+}
+
+.paper-grain {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22160%22%20height%3D%22160%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.8%22%20numOctaves%3D%223%22%20stitchTiles%3D%22stitch%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22100%2525%22%20height%3D%22100%2525%22%20filter%3D%22url(%23n)%22%2F%3E%3C%2Fsvg%3E");
+  opacity: 0.085;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  z-index: 50;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  animation: fade-up 0.22s ease;
+  min-height: 0;
+}
