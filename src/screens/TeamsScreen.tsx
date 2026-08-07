@@ -89,7 +89,7 @@ export function TeamsScreen({ mode, teamCount, draft, onBack, onSetTeamCount, on
         </div>
       </DndContext>
 
-      <Button onClick={onContinue} disabled={!canContinue} style={{ opacity: canContinue ? 1 : 0.45 }}>
+      <Button onClick={onContinue} disabled={!canContinue} color="var(--gradient-5)" style={{ opacity: canContinue ? 1 : 0.45 }}>
         Continue
       </Button>
     </div>

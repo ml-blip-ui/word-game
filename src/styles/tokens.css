@@ -29,8 +29,17 @@
   --team-4: oklch(0.47 0.1 350);
 
   /* Primary CTA treatment — a touch more festive than a flat fill for the
-     buttons that repeat throughout setup (Continue, Enter, Create group). */
-  --gradient-primary: linear-gradient(135deg, oklch(0.58 0.16 45) 0%, oklch(0.56 0.14 15) 55%, oklch(0.52 0.13 340) 100%);
+     buttons that repeat throughout setup (Continue, Enter, Create group,
+     Start game). One recipe (same lightness/chroma, hue stepping back ~30°
+     across three stops), rotated to six different starting points around
+     the wheel so CTAs vary by screen instead of every one reading as rust. */
+  --gradient-1: linear-gradient(135deg, oklch(0.58 0.16 45) 0%, oklch(0.56 0.14 15) 55%, oklch(0.52 0.13 340) 100%); /* rust -> rose -> plum */
+  --gradient-2: linear-gradient(135deg, oklch(0.58 0.16 105) 0%, oklch(0.56 0.14 75) 55%, oklch(0.52 0.13 40) 100%); /* olive -> ochre -> rust */
+  --gradient-3: linear-gradient(135deg, oklch(0.58 0.16 165) 0%, oklch(0.56 0.14 135) 55%, oklch(0.52 0.13 100) 100%); /* teal-green -> sage -> olive */
+  --gradient-4: linear-gradient(135deg, oklch(0.58 0.16 225) 0%, oklch(0.56 0.14 195) 55%, oklch(0.52 0.13 160) 100%); /* blue -> teal -> green */
+  --gradient-5: linear-gradient(135deg, oklch(0.58 0.16 285) 0%, oklch(0.56 0.14 255) 55%, oklch(0.52 0.13 220) 100%); /* violet -> blue -> blue-teal */
+  --gradient-6: linear-gradient(135deg, oklch(0.58 0.16 345) 0%, oklch(0.56 0.14 315) 55%, oklch(0.52 0.13 280) 100%); /* rose-red -> plum -> violet */
+  --gradient-primary: var(--gradient-1);
 
   --font-serif: 'Corben', serif;
   --font-sans: 'Manrope', sans-serif;

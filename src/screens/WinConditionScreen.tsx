@@ -93,7 +93,7 @@ export function WinConditionScreen({ mode, teamCount, turnSeconds, winType, winV
           padding: 20,
           borderRadius: '20px 15px 22px 16px',
           border: '2.2px solid var(--ink)',
-          background: 'var(--rust)',
+          background: 'var(--gradient-6)',
           color: 'var(--cream)',
           fontWeight: 800,
           fontSize: 19,

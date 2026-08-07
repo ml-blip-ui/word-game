@@ -182,7 +182,7 @@ const primaryButtonStyle = {
   padding: 19,
   borderRadius: '20px 15px 22px 16px',
   border: '2.2px solid var(--ink)',
-  background: 'var(--gradient-primary)',
+  background: 'var(--gradient-3)',
   color: 'var(--cream)',
   fontWeight: 800,
   fontSize: 18,

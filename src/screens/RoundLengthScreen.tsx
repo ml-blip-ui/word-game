@@ -36,7 +36,7 @@ export function RoundLengthScreen({ turnSeconds, onBack, onSet, onContinue }: Ro
         ))}
       </div>
       <div style={{ flex: 1 }} />
-      <Button onClick={onContinue}>Continue</Button>
+      <Button onClick={onContinue} color="var(--gradient-2)">Continue</Button>
     </div>
   );
 }
