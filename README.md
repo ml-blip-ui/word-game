@@ -14,6 +14,7 @@ intent — they're the source of truth for *why* things work the way they do.
 1. Create a new project in the Supabase dashboard.
 2. Open **SQL Editor** and run, in order:
    - `supabase/migrations/0001_init.sql` — tables, RPC functions, RLS policies, the stats view.
+   - `supabase/migrations/0002_groups.sql` — groups (persistent named rosters, e.g. "Grups and Chiddlers").
    - `supabase/seed/seed_data.sql` — loads the ~7,500 words and 800 songs.
 3. Under **Project Settings → API**, copy the **Project URL** and **anon / publishable** key.
 
@@ -27,6 +28,11 @@ Fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from step 1. The anon
 key is safe to ship client-side by design — it's constrained by the RLS
 policies in the migration, not by secrecy.
 
+`VITE_APP_PASSWORD` (default `wordz`) gates the app past the title screen.
+This is a soft deterrent against casual sharing — the word bank isn't ours to
+redistribute — not real security: it ships in the client bundle like any
+other Vite env var, and the check happens entirely client-side.
+
 ### 3. Run it
 
 ```
@@ -38,8 +44,19 @@ npm run dev
 
 `netlify.toml` is already set up (`npm run build`, publishes `dist/`, SPA
 redirect). In Netlify: **Add new site → Import an existing project**, point
-it at this repo/branch, and add the same two `VITE_SUPABASE_*` env vars
-under **Site settings → Environment variables**.
+it at this repo/branch, and add the same three env vars (`VITE_SUPABASE_URL`,
+`VITE_SUPABASE_ANON_KEY`, `VITE_APP_PASSWORD`) under **Site settings →
+Environment variables**.
+
+## Groups
+
+A group is a persistent named roster (e.g. "Grups and Chiddlers") — separate
+from a game's teams. Picking a group at setup fills in all its members; team
+count and who's on which team are still decided fresh each game (drag the
+⠿ handle on a player pill to move them to another team), defaulting to
+however the group split last time. Deliberately no group-level scoreboard —
+kept to roster + last split only, to avoid turning a holiday game into a
+running competition.
 
 ## Notes on categories
 

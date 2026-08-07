@@ -4,6 +4,8 @@ export type Mode = 'practice' | 'collaborative' | 'competitive';
 export type WinType = 'time' | 'points' | 'rounds';
 
 export type Screen =
+  | 'title'
+  | 'chooseGroup'
   | 'mode'
   | 'setupTeams'
   | 'setupLength'
@@ -65,6 +67,8 @@ export interface GameState {
 
   teamCount: number;
   draft: DraftTeam[];
+  activeGroupId: string | null;
+  groupRoster: { id: string; name: string }[] | null;
 
   turnSeconds: number;
   winType: WinType;

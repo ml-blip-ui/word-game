@@ -121,6 +121,56 @@ export async function recordBestScoreIfHigher(
   return true;
 }
 
+export interface GroupMember {
+  id: string;
+  name: string;
+}
+
+export interface GroupRoster {
+  id: string;
+  name: string;
+  members: GroupMember[];
+}
+
+export async function fetchGroups(): Promise<GroupRoster[]> {
+  const { data, error } = await supabase.from('group_rosters').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as GroupRoster[];
+}
+
+export async function createGroup(name: string, memberNames: string[]): Promise<GroupRoster> {
+  const trimmed = name.trim();
+  const { data: group, error } = await supabase.from('groups').insert({ name: trimmed }).select('id, name').single();
+  if (error) throw error;
+  const members: GroupMember[] = [];
+  for (let i = 0; i < memberNames.length; i++) {
+    const playerId = await upsertPlayer(memberNames[i]);
+    const { error: memberError } = await supabase.from('group_members').insert({ group_id: group.id, player_id: playerId, member_order: i });
+    if (memberError) throw memberError;
+    members.push({ id: playerId, name: memberNames[i].trim() });
+  }
+  return { id: group.id, name: group.name, members };
+}
+
+export interface GroupLastTeams {
+  teamCount: number;
+  teams: string[][]; // player_id per team
+}
+
+export async function fetchGroupLastTeams(groupId: string): Promise<GroupLastTeams | null> {
+  const { data, error } = await supabase.from('group_last_teams').select('team_count, teams').eq('group_id', groupId).maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return { teamCount: data.team_count, teams: data.teams as string[][] };
+}
+
+export async function saveGroupLastTeams(groupId: string, teams: string[][]): Promise<void> {
+  const { error } = await supabase
+    .from('group_last_teams')
+    .upsert({ group_id: groupId, team_count: teams.length, teams, updated_at: new Date().toISOString() }, { onConflict: 'group_id' });
+  if (error) throw error;
+}
+
 export interface LeaderboardRow {
   player_id: string;
   name: string;

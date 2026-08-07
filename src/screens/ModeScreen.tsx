@@ -9,13 +9,17 @@ const OPTIONS: { key: Mode; label: string; desc: string }[] = [
 interface ModeScreenProps {
   onSelect: (mode: Mode) => void;
   onLeaderboard: () => void;
+  onBack: () => void;
   muted: boolean;
   onToggleMuted: () => void;
 }
 
-export function ModeScreen({ onSelect, onLeaderboard, muted, onToggleMuted }: ModeScreenProps) {
+export function ModeScreen({ onSelect, onLeaderboard, onBack, muted, onToggleMuted }: ModeScreenProps) {
   return (
     <div className="screen" style={{ justifyContent: 'center', gap: 26, padding: '34px 28px' }}>
+      <button onClick={onBack} style={{ alignSelf: 'flex-start', padding: 0, border: 'none', background: 'none', fontWeight: 700, fontSize: 15, color: 'var(--ink-muted)', cursor: 'pointer' }}>
+        ‹ Back
+      </button>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: 40, lineHeight: 1.05, color: 'var(--ink)' }}>New game</div>
         <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 16, color: 'var(--ink-muted)' }}>Pick how you're playing.</div>

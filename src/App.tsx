@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useGame } from './lib/useGame';
+import { TitleScreen } from './screens/TitleScreen';
+import { GroupScreen } from './screens/GroupScreen';
 import { ModeScreen } from './screens/ModeScreen';
 import { TeamsScreen } from './screens/TeamsScreen';
 import { RoundLengthScreen } from './screens/RoundLengthScreen';
@@ -37,8 +39,14 @@ export default function App() {
     content = <LeaderboardScreen onBack={() => setPreGameLeaderboard(false)} />;
   } else {
     switch (s.screen) {
+      case 'title':
+        content = <TitleScreen onContinue={g.goToChooseGroup} />;
+        break;
+      case 'chooseGroup':
+        content = <GroupScreen onPick={g.pickGroup} onSkip={g.skipGroup} />;
+        break;
       case 'mode':
-        content = <ModeScreen onSelect={g.setMode} onLeaderboard={() => setPreGameLeaderboard(true)} muted={s.muted} onToggleMuted={g.toggleMuted} />;
+        content = <ModeScreen onSelect={g.setMode} onLeaderboard={() => setPreGameLeaderboard(true)} onBack={() => g.backTo('chooseGroup')} muted={s.muted} onToggleMuted={g.toggleMuted} />;
         break;
       case 'setupTeams':
         content = (

@@ -11,11 +11,14 @@ import {
   createGamePlayer,
   createGameTeam,
   fetchBestScore,
+  fetchGroupLastTeams,
   finishGame,
   logTurnEvent,
   recordBestScoreIfHigher,
+  saveGroupLastTeams,
   setTurnEventFlag,
   upsertPlayer,
+  type GroupRoster,
 } from './persistence';
 
 const NAME_POOL = ['Sarah', 'Amir', 'Priya', 'Jonah', 'Mia', 'Tom', 'Rosa', 'Kit', 'Dev', 'Nell', 'Cass', 'Bea', 'Ravi', 'Ines'];
@@ -29,12 +32,34 @@ function buildDraft(teamCount: number, perTeam: number): DraftTeam[] {
   }));
 }
 
+// Round-robins a group's roster into teamCount teams, unless a preset split
+// (the group's last-used teams, id-based) still matches that team count.
+function buildDraftFromRoster(teamCount: number, roster: { id: string; name: string }[], preset?: string[][] | null): DraftTeam[] {
+  if (preset && preset.length === teamCount) {
+    const byId = new Map(roster.map((m) => [m.id, m.name]));
+    return preset.map((ids, ti) => ({
+      name: `Team ${ti + 1}`,
+      color: TEAM_COLORS[ti % TEAM_COLORS.length],
+      players: ids.map((id) => byId.get(id)).filter((n): n is string => !!n),
+    }));
+  }
+  const teams: DraftTeam[] = Array.from({ length: teamCount }, (_, ti) => ({
+    name: `Team ${ti + 1}`,
+    color: TEAM_COLORS[ti % TEAM_COLORS.length],
+    players: [],
+  }));
+  roster.forEach((m, i) => teams[i % teamCount].players.push(m.name));
+  return teams;
+}
+
 function initialState(): GameState {
   return {
-    screen: 'mode',
+    screen: 'title',
     mode: null,
     teamCount: 2,
     draft: buildDraft(2, 2),
+    activeGroupId: null,
+    groupRoster: null,
     turnSeconds: 90,
     winType: 'time',
     winValue: 15,
@@ -109,19 +134,59 @@ export function useGame() {
 
   // ---- setup ----
 
+  const goToChooseGroup = useCallback(() => patch({ screen: 'chooseGroup' }), [patch]);
+
+  const pickGroup = useCallback(async (group: GroupRoster) => {
+    patch({ activeGroupId: group.id, groupRoster: group.members });
+    let teamCount = 2;
+    let draft = buildDraftFromRoster(2, group.members);
+    try {
+      const last = await fetchGroupLastTeams(group.id);
+      if (last) {
+        teamCount = last.teamCount;
+        draft = buildDraftFromRoster(teamCount, group.members, last.teams);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    patch({ teamCount, draft, screen: 'mode' });
+  }, [patch]);
+
+  const skipGroup = useCallback(() => {
+    patch({ activeGroupId: null, groupRoster: null, teamCount: 2, draft: buildDraft(2, 2), screen: 'mode' });
+  }, [patch]);
+
   const setMode = useCallback((mode: Mode) => {
-    const teamCount = mode === 'practice' ? 1 : stateRef.current.teamCount;
-    const perTeam = stateRef.current.draft[0]?.players.length ?? 2;
+    const s = stateRef.current;
     // Practice mode uses the time limit only (spec §3) — force it here so a
     // leftover points/rounds selection from a previous mode choice can't
     // leak into the win-condition screen behind a hidden type selector.
     const winOverrides = mode === 'practice' ? { winType: 'time' as const, winValue: 15 } : {};
+
+    if (s.groupRoster) {
+      // Changing mode shouldn't reshuffle an already-chosen team split —
+      // practice is the one case that forces a shape change (everyone on
+      // one team).
+      if (mode === 'practice') {
+        patch({ mode, teamCount: 1, draft: buildDraftFromRoster(1, s.groupRoster), screen: 'setupTeams', ...winOverrides });
+        return;
+      }
+      const teamCount = s.teamCount > 1 ? s.teamCount : 2;
+      const draft = s.draft.length === teamCount ? s.draft : buildDraftFromRoster(teamCount, s.groupRoster);
+      patch({ mode, teamCount, draft, screen: 'setupTeams', ...winOverrides });
+      return;
+    }
+
+    const teamCount = mode === 'practice' ? 1 : s.teamCount;
+    const perTeam = s.draft[0]?.players.length ?? 2;
     patch({ mode, teamCount, draft: buildDraft(teamCount, perTeam), screen: 'setupTeams', ...winOverrides });
   }, [patch]);
 
   const setTeamCount = useCallback((n: number) => {
     const s = stateRef.current;
-    const draft = buildDraft(n, s.draft[0]?.players.length ?? 2).map((t, i) => (s.draft[i] ? { ...t, players: s.draft[i].players } : t));
+    const draft = s.groupRoster
+      ? buildDraftFromRoster(n, s.groupRoster)
+      : buildDraft(n, s.draft[0]?.players.length ?? 2).map((t, i) => (s.draft[i] ? { ...t, players: s.draft[i].players } : t));
     patch({ teamCount: n, draft, winValue: s.winType === 'rounds' ? nearestMultiple(s.winValue, n) : s.winValue });
   }, [patch]);
 
@@ -191,6 +256,13 @@ export function useGame() {
       let bestScore: number | null = null;
       if (s.mode === 'practice' || s.mode === 'collaborative') {
         bestScore = await fetchBestScore(s.mode, s.turnSeconds, s.winType, s.winValue);
+      }
+      if (s.activeGroupId) {
+        try {
+          await saveGroupLastTeams(s.activeGroupId, teams.map((t) => t.players.map((p) => p.playerId)));
+        } catch (e) {
+          console.error(e);
+        }
       }
       patch({
         gameId,
@@ -422,7 +494,7 @@ export function useGame() {
   const nextTurn = useCallback(() => {
     const s = stateRef.current;
     if (isGameOver(s)) {
-      patch({ ...initialState(), muted: s.muted });
+      patch({ ...initialState(), muted: s.muted, screen: 'chooseGroup' });
       return;
     }
     const nextIdx = (s.currentTeamIdx + 1) % s.teams.length;
@@ -454,6 +526,9 @@ export function useGame() {
     state,
     gameOver,
     conditionMet,
+    goToChooseGroup,
+    pickGroup,
+    skipGroup,
     setMode,
     setTeamCount,
     addPlayer,
