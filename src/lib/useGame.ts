@@ -4,7 +4,7 @@ import { CATEGORIES, TEAM_COLORS } from './categories';
 import type { DraftTeam, GameState, Mode, Team, TurnWordEntry, WinType } from './types';
 import { drawNext } from './wordDraw';
 import { planAllplay, checkAllplay } from './allplay';
-import { isGameOver, winConditionMet } from './winConditions';
+import { isGameOver } from './winConditions';
 import { playCorrect, playSkip, playTokenSpent, playTurnExpired } from './sound';
 import {
   createGame,
@@ -71,6 +71,7 @@ function initialState(): GameState {
     collaborativeScore: 0,
     gameStartedAt: null,
     endedEarly: false,
+    gameFinished: false,
     categoryKey: null,
     wheelRotationDeg: 0,
     wheelSpinning: false,
@@ -83,7 +84,8 @@ function initialState(): GameState {
     wordTimeLimit: 15,
     turnWords: [],
     turnWordCount: 0,
-    allplayCountThisTurn: 0,
+    allplayWordsInOccurrence: 0,
+    allplayOccurrencesDone: 0,
     allplayPlan: null,
     currentWord: null,
     songPaused: false,
@@ -126,7 +128,11 @@ export function useGame() {
   useEffect(() => {
     const id = setInterval(() => {
       const s = stateRef.current;
-      if ((s.screen === 'play' || s.screen === 'allplay') && !s.songPaused) {
+      // Both clocks freeze during the ALL PLAY announcement flash — the
+      // screen underneath is stale (the new word isn't revealed yet), and
+      // letting the previous word's last seconds run out here would
+      // auto-skip the new word before anyone has seen it.
+      if ((s.screen === 'play' || s.screen === 'allplay') && !s.songPaused && !s.showAllplayAnnouncement) {
         const turnLeft = Math.max(0, s.turnTimeLeft - 1);
         const wordLeft = Math.max(0, s.wordTimeLeft - 1);
         const justExpired = !s.turnExpired && turnLeft === 0;
@@ -200,7 +206,7 @@ export function useGame() {
     const draft = s.groupRoster
       ? buildDraftFromRoster(n, s.groupRoster)
       : buildDraft(n, s.draft[0]?.players.length ?? 2).map((t, i) => (s.draft[i] ? { ...t, players: s.draft[i].players } : t));
-    patch({ teamCount: n, draft, winValue: s.winType === 'rounds' ? nearestMultiple(s.winValue, n) : s.winValue });
+    patch({ teamCount: n, draft, winValue: s.winType === 'rounds' ? snapRoundCount(s.winValue, n) : s.winValue });
   }, [patch]);
 
   const addPlayer = useCallback((teamIdx: number) => {
@@ -237,7 +243,7 @@ export function useGame() {
 
   const setWinType = useCallback((winType: WinType) => {
     const s = stateRef.current;
-    const winValue = winType === 'time' ? 15 : winType === 'points' ? 30 : nearestMultiple(4, s.teamCount);
+    const winValue = winType === 'time' ? 15 : winType === 'points' ? 30 : s.teamCount * 2;
     patch({ winType, winValue });
   }, [patch]);
 
@@ -332,7 +338,8 @@ export function useGame() {
       turnTimeLeft: s.turnSeconds,
       turnWords: [],
       turnWordCount: 0,
-      allplayCountThisTurn: 0,
+      allplayWordsInOccurrence: 0,
+      allplayOccurrencesDone: 0,
       allplayPlan: s.mode === 'competitive' && s.teams.length > 1 ? planAllplay() : null,
     });
     await drawNextWord(true);
@@ -341,42 +348,106 @@ export function useGame() {
   const drawNextWord = useCallback(async (first: boolean) => {
     const s = stateRef.current;
     if (!s.categoryKey) return;
+    // Normal flow never reaches here after expiry (resolveWord routes to
+    // the summary first); this only trips if a failed draw's retry lands
+    // after the turn timer has run out mid-retry.
+    if (s.turnExpired) {
+      patch({ screen: 'summary', loadingWord: false });
+      return;
+    }
     patch({ loadingWord: true });
     const count = first ? 0 : s.turnWordCount;
 
-    const allplayCheck = checkAllplay({
-      mode: s.mode!,
-      teamCount: s.teams.length,
-      turnWordCount: count,
-      turnTimeLeft: s.turnTimeLeft,
-      turnSeconds: s.turnSeconds,
-      turnExpired: s.turnExpired,
-      allplayCountThisTurn: s.allplayCountThisTurn,
-      plan: s.allplayPlan,
-    });
+    // A skipped all-play word chains straight into another all-play word
+    // (spec §8), so while an occurrence is open, checkAllplay isn't
+    // consulted — the next word is an all-play by continuation.
+    const continuingAllplay = s.allplayWordsInOccurrence > 0;
+    const allplayCheck = continuingAllplay
+      ? { isAllplay: false, updatedPlan: s.allplayPlan }
+      : checkAllplay({
+          mode: s.mode!,
+          teamCount: s.teams.length,
+          turnWordCount: count,
+          turnTimeLeft: s.turnTimeLeft,
+          turnSeconds: s.turnSeconds,
+          turnExpired: s.turnExpired,
+          occurrencesDone: s.allplayOccurrencesDone,
+          plan: s.allplayPlan,
+        });
 
     let drawn;
     try {
       drawn = await drawNext(s.categoryKey);
     } catch (e) {
       console.error(e);
-      patch({ loadingWord: false, error: `Couldn't get the next word: ${errorMessage(e)}` });
+      // Keep loadingWord true so the stale word on screen can't be
+      // resolved a second time, and retry until the network comes back or
+      // the player leaves the play flow.
+      patch({ error: `Couldn't get the next word: ${errorMessage(e)} — retrying…` });
+      setTimeout(() => {
+        const cur = stateRef.current;
+        if ((cur.screen === 'token' || cur.screen === 'play' || cur.screen === 'song' || cur.screen === 'allplay') && !cur.showAllplayAnnouncement) {
+          void drawNextWord(first);
+        }
+      }, 2000);
       return;
     }
 
     const isSong = drawn.kind === 'song';
+
+    if (continuingAllplay) {
+      if (isSong) {
+        // A song can't be an all-play (its clock is paused, and the steal
+        // buttons make no sense against "title and artist"). Rare — only
+        // possible on a Random turn. End the occurrence and serve the song
+        // normally rather than skipping it back into the pool.
+        patch({
+          allplayWordsInOccurrence: 0,
+          allplayOccurrencesDone: s.allplayOccurrencesDone + 1,
+          currentWord: drawn,
+          turnWordCount: count + 1,
+          screen: 'song',
+          songPaused: true,
+          wordTimeLimit: 15,
+          wordTimeLeft: 15,
+          loadingWord: false,
+          error: null,
+        });
+        return;
+      }
+      // Second word of the occurrence: straight in, no announcement.
+      patch({
+        currentWord: drawn,
+        turnWordCount: count + 1,
+        screen: 'allplay',
+        allplayWordsInOccurrence: s.allplayWordsInOccurrence + 1,
+        wordTimeLimit: 10,
+        wordTimeLeft: 10,
+        loadingWord: false,
+        error: null,
+      });
+      return;
+    }
+
     const willAllplay = allplayCheck.isAllplay && !isSong;
 
     if (willAllplay) {
-      patch({ allplayPlan: allplayCheck.updatedPlan, showAllplayAnnouncement: true, turnWordCount: count + 1, loadingWord: false, error: null, currentWord: drawn });
+      // The word timer is set to 10 immediately, not when the announcement
+      // clears — the tick is frozen during the flash, and the reveal must
+      // never inherit the previous word's dying seconds.
+      patch({
+        allplayPlan: allplayCheck.updatedPlan,
+        showAllplayAnnouncement: true,
+        currentWord: drawn,
+        turnWordCount: count + 1,
+        allplayWordsInOccurrence: 1,
+        wordTimeLimit: 10,
+        wordTimeLeft: 10,
+        loadingWord: false,
+        error: null,
+      });
       setTimeout(() => {
-        patch((prev) => ({
-          showAllplayAnnouncement: false,
-          screen: 'allplay',
-          wordTimeLimit: 10,
-          wordTimeLeft: 10,
-          allplayCountThisTurn: prev.allplayCountThisTurn + 1,
-        }));
+        patch({ showAllplayAnnouncement: false, screen: 'allplay' });
       }, 1200);
       return;
     }
@@ -396,7 +467,12 @@ export function useGame() {
 
   const resolveWord = useCallback(async (outcome: TurnWordEntry['outcome'], scoredTeamIdx?: number) => {
     const s = stateRef.current;
-    if (!s.currentWord) return;
+    // loadingWord doubles as an in-flight lock: between resolving a word
+    // and the next one appearing there's a network round-trip during which
+    // the old word is still on screen with live buttons. Without this, an
+    // impatient double-tap scores the same word twice and logs it twice.
+    if (!s.currentWord || s.loadingWord) return;
+    patch({ loadingWord: true });
     const doubled = s.tokenSpentThisTurn;
     const wasAllplay = s.screen === 'allplay';
     const targetIdx = scoredTeamIdx ?? s.currentTeamIdx;
@@ -452,10 +528,19 @@ export function useGame() {
       songId: cw.kind === 'song' ? cw.id : null,
     };
     patch((prev) => ({ turnWords: [...prev.turnWords, entry] }));
-    if (wasAllplay) patch({ screen: 'play' });
+
+    if (wasAllplay) {
+      // The occurrence ends when the word is guessed, or after two failed
+      // words (spec §8's cap). A failed first word keeps the occurrence
+      // open, and the next draw chains into another all-play word.
+      const occurrenceEnds = wasCorrect || s.allplayWordsInOccurrence >= 2;
+      if (occurrenceEnds) {
+        patch({ allplayWordsInOccurrence: 0, allplayOccurrencesDone: s.allplayOccurrencesDone + 1, screen: 'play' });
+      }
+    }
 
     if (stateRef.current.turnExpired) {
-      patch({ screen: 'summary' });
+      patch({ screen: 'summary', loadingWord: false, allplayWordsInOccurrence: 0 });
     } else {
       await drawNextWord(false);
     }
@@ -530,9 +615,13 @@ export function useGame() {
   const confirmSummary = useCallback(async () => {
     const s = stateRef.current;
     const totalTurnsPlayed = s.totalTurnsPlayed + 1;
-    patch({ screen: 'scoreboard', totalTurnsPlayed });
-
+    // The win condition is evaluated exactly once, here — the post-turn
+    // checkpoint. Evaluating it live (e.g. again in nextTurn) meant a
+    // time-limit crossing while the scoreboard sat on screen could flip
+    // what the "Next turn" button did between render and press.
     const over = isGameOver({ ...s, totalTurnsPlayed });
+    patch({ screen: 'scoreboard', totalTurnsPlayed, gameFinished: over });
+
     if (over && s.gameId) {
       try {
         await finishGame(s.gameId, s.teams.map((t) => ({ gameTeamId: t.gameTeamId, score: t.score })));
@@ -564,7 +653,7 @@ export function useGame() {
 
   const nextTurn = useCallback(() => {
     const s = stateRef.current;
-    if (isGameOver(s) || s.endedEarly) {
+    if (s.gameFinished || s.endedEarly) {
       patch({ ...initialState(), muted: s.muted, screen: 'chooseGroup' });
       return;
     }
@@ -583,20 +672,20 @@ export function useGame() {
       turnTimeLeft: s.turnSeconds,
       turnExpired: false,
       wheelRotationDeg: s.wheelRotationDeg % 360,
-      allplayCountThisTurn: 0,
+      allplayWordsInOccurrence: 0,
+      allplayOccurrencesDone: 0,
       allplayPlan: null,
+      loadingWord: false,
     });
   }, [patch]);
 
   const toggleMuted = useCallback(() => patch((prev) => ({ muted: !prev.muted })), [patch]);
 
-  const gameOver = isGameOver(state) || state.endedEarly;
-  const conditionMet = winConditionMet(state);
+  const gameOver = state.gameFinished || state.endedEarly;
 
   return {
     state,
     gameOver,
-    conditionMet,
     goToChooseGroup,
     pickGroup,
     skipGroup,
@@ -628,9 +717,15 @@ export function useGame() {
   };
 }
 
-function nearestMultiple(value: number, base: number): number {
-  if (base <= 0) return value;
-  return Math.max(base, Math.round(value / base) * base);
+// The win-condition screen offers round counts of teams × 2/4/6/8, so a
+// carried-over value must snap to one of those four — not merely to any
+// multiple of the team count, which could land between the options and
+// leave nothing visibly selected.
+function snapRoundCount(value: number, teams: number): number {
+  if (teams <= 0) return value;
+  const step = teams * 2;
+  const k = Math.min(4, Math.max(1, Math.round(value / step)));
+  return step * k;
 }
 
 export type UseGameReturn = ReturnType<typeof useGame>;

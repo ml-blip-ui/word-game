@@ -85,6 +85,11 @@ export interface GameState {
 
   gameStartedAt: number | null;
   endedEarly: boolean;
+  // Set once, at the post-turn checkpoint in confirmSummary. The win
+  // condition is only ever evaluated there — never live — so time crossing
+  // the limit while the scoreboard is being argued over doesn't change
+  // what buttons mean between render and press.
+  gameFinished: boolean;
 
   categoryKey: CategoryKey | null;
   wheelRotationDeg: number;
@@ -101,7 +106,11 @@ export interface GameState {
 
   turnWords: TurnWordEntry[];
   turnWordCount: number;
-  allplayCountThisTurn: number;
+  // An all-play "occurrence" can span up to two words: if the first is
+  // skipped, another all-play word is served before normal play resumes
+  // (gameplay spec §8). wordsInOccurrence is 0 when not in an all-play.
+  allplayWordsInOccurrence: number;
+  allplayOccurrencesDone: number;
   allplayPlan: AllplayPlan | null;
   currentWord: DrawnWord | null;
   songPaused: boolean;

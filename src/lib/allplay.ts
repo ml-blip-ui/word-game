@@ -19,6 +19,10 @@ export function planAllplay(): AllplayPlan {
 
 const MIDDLE_THIRD_END = 2 / 3;
 
+// Decides whether a NEW all-play occurrence starts on this draw. An
+// occurrence, once started, can serve up to two words (skip chains to a
+// second all-play word); that continuation is handled by the game engine,
+// not here — this function is only consulted between occurrences.
 export interface AllplayCheckInput {
   mode: 'practice' | 'collaborative' | 'competitive';
   teamCount: number;
@@ -26,7 +30,7 @@ export interface AllplayCheckInput {
   turnTimeLeft: number;
   turnSeconds: number;
   turnExpired: boolean;
-  allplayCountThisTurn: number;
+  occurrencesDone: number;
   plan: AllplayPlan | null;
 }
 
@@ -36,25 +40,25 @@ export interface AllplayCheckResult {
 }
 
 export function checkAllplay(input: AllplayCheckInput): AllplayCheckResult {
-  const { mode, teamCount, turnWordCount, turnTimeLeft, turnSeconds, turnExpired, allplayCountThisTurn, plan } = input;
+  const { mode, teamCount, turnWordCount, turnTimeLeft, turnSeconds, turnExpired, occurrencesDone, plan } = input;
 
   // Once the turn timer has expired we're in "finish what you started"
   // territory — the word in progress when the buzzer sounds is by
   // definition the last one, so no new all-play may start here.
-  if (mode !== 'competitive' || teamCount <= 1 || !plan || turnWordCount === 0 || allplayCountThisTurn >= 2 || turnExpired) {
+  if (mode !== 'competitive' || teamCount <= 1 || !plan || turnWordCount === 0 || occurrencesDone >= 2 || turnExpired) {
     return { isAllplay: false, updatedPlan: plan };
   }
 
   const elapsedFrac = 1 - turnTimeLeft / turnSeconds;
 
-  if (allplayCountThisTurn === 0) {
+  if (occurrencesDone === 0) {
     if (elapsedFrac >= plan.firstTargetFrac) {
       return { isAllplay: true, updatedPlan: plan };
     }
     return { isAllplay: false, updatedPlan: plan };
   }
 
-  if (allplayCountThisTurn === 1 && plan.secondEligible) {
+  if (occurrencesDone === 1 && plan.secondEligible) {
     let updatedPlan = plan;
     if (plan.secondTargetFrac === null) {
       const remaining = MIDDLE_THIRD_END - elapsedFrac;

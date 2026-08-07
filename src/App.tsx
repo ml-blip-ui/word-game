@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useGame } from './lib/useGame';
+import { useWakeLock } from './lib/useWakeLock';
 import { TitleScreen } from './screens/TitleScreen';
 import { GroupScreen } from './screens/GroupScreen';
 import { ModeScreen } from './screens/ModeScreen';
@@ -23,11 +24,23 @@ export default function App() {
   const s = g.state;
   const [preGameLeaderboard, setPreGameLeaderboard] = useState(false);
 
+  // Screen wake lock during actual gameplay — the describer doesn't touch
+  // the screen while talking, and a phone auto-locking mid-turn kills the
+  // round.
+  const inGame = !['title', 'chooseGroup', 'mode', 'setupTeams', 'setupLength', 'setupWin', 'leaderboard'].includes(s.screen);
+  useWakeLock(inGame);
+
   const currentTeam = s.teams[s.currentTeamIdx];
+  // The running "turn score" is the describing team's tally. A stolen
+  // all-play point belongs to the stealing team, so it must not show up
+  // here as if the describing team earned it.
   const turnScore = s.turnWords.reduce((a, w) => {
     const mult = w.doubled ? 2 : 1;
-    if (w.flagged) return a - mult;
-    return a + (w.outcome === 'correct' ? 1 : -1) * mult;
+    if (w.outcome === 'correct') {
+      if (w.scoredTeamIdx !== s.currentTeamIdx) return a; // stolen — not ours
+      return a + (w.flagged ? -1 : 1) * mult;
+    }
+    return a - mult; // skips always cost the describing team
   }, 0);
   const settingsSummary = `${s.mode === 'practice' ? '1 team' : `${s.teams.length || s.teamCount} teams`} · ${s.turnSeconds}s turns · ${
     s.winType === 'time' ? `${s.winValue} minutes` : s.winType === 'points' ? `first to ${s.winValue}` : `${s.winValue} rounds`

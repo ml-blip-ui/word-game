@@ -15,6 +15,10 @@ function getCtx(): AudioContext | null {
 function beep(freq: number, dur: number, vol: number, type: OscillatorType = 'sine') {
   const c = getCtx();
   if (!c) return;
+  // iOS creates AudioContexts suspended until a user gesture. Most sounds
+  // fire from taps, but the very first sound of a session can be a
+  // timer-driven auto-skip — resume() here so it isn't silently dropped.
+  if (c.state === 'suspended') void c.resume();
   const osc = c.createOscillator();
   const gain = c.createGain();
   osc.type = type;
