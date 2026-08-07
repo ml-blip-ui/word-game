@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TitlePlate } from '../components/TitlePlate';
+import { fitSize } from '../lib/wordSize';
+
+const TITLE_WORD = 'Blurticulate';
 
 const UNLOCK_KEY = 'blurticulate_unlocked';
 const PASSWORD = import.meta.env.VITE_APP_PASSWORD || 'wordz';
@@ -19,6 +22,22 @@ export function TitleScreen({ onContinue }: TitleScreenProps) {
   const [unlocked, setUnlocked] = useState(() => localStorage.getItem(UNLOCK_KEY) === 'true');
   const [input, setInput] = useState('');
   const [wrong, setWrong] = useState(false);
+  const titleRef = useRef<HTMLDivElement>(null);
+  const [titleFontSize, setTitleFontSize] = useState(28);
+
+  // The card's width is content-driven (it floats on the background, no
+  // fixed layout width), so the only reliable way to size the wordmark to
+  // fit is to measure the actual rendered space and shrink to it — the same
+  // approach used for "the word" during gameplay.
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    const update = () => setTitleFontSize(fitSize(TITLE_WORD, 44, el.clientWidth));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const submit = () => {
     if (input.trim().toLowerCase() === PASSWORD.toLowerCase()) {
@@ -48,9 +67,11 @@ export function TitleScreen({ onContinue }: TitleScreenProps) {
         {/* Gradient "border": outer layer painted with the gradient, inner
             layer inset by the border width — renders reliably with rounded
             corners everywhere, unlike border-image. */}
-        <div style={{ padding: 6, borderRadius: '30px 22px 32px 24px', background: BORDER_GRADIENT, maxWidth: 320 }}>
+        <div style={{ width: '100%', maxWidth: 320, boxSizing: 'border-box', padding: 6, borderRadius: '30px 22px 32px 24px', background: BORDER_GRADIENT }}>
           <div
             style={{
+              width: '100%',
+              boxSizing: 'border-box',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -61,8 +82,8 @@ export function TitleScreen({ onContinue }: TitleScreenProps) {
               textAlign: 'center',
             }}
           >
-            <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: 44, lineHeight: 1.05 }}>
-              {'Blurticulate'.split('').map((ch, i) => (
+            <div ref={titleRef} style={{ width: '100%', fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: titleFontSize, lineHeight: 1.05, overflowWrap: 'normal' }}>
+              {TITLE_WORD.split('').map((ch, i) => (
                 <span key={i} style={{ color: LETTER_COLORS[i % LETTER_COLORS.length] }}>
                   {ch}
                 </span>

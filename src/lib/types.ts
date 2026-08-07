@@ -104,6 +104,7 @@ export interface GameState {
 
   muted: boolean;
   loadingWord: boolean;
+  error: string | null;
 
   bestScore: number | null; // for the currently-matching settings, fetched at game start
 }

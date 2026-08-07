@@ -21,14 +21,13 @@ import {
   type GroupRoster,
 } from './persistence';
 
-const NAME_POOL = ['Sarah', 'Amir', 'Priya', 'Jonah', 'Mia', 'Tom', 'Rosa', 'Kit', 'Dev', 'Nell', 'Cass', 'Bea', 'Ravi', 'Ines'];
-
+// Teams start with blank entries, not placeholder names — a fake "Sarah"
+// sitting in an input reads as pre-filled data rather than a prompt to type.
 function buildDraft(teamCount: number, perTeam: number): DraftTeam[] {
-  let n = 0;
   return Array.from({ length: teamCount }, (_, ti) => ({
     name: `Team ${ti + 1}`,
     color: TEAM_COLORS[ti % TEAM_COLORS.length],
-    players: Array.from({ length: perTeam }, () => NAME_POOL[n++ % NAME_POOL.length]),
+    players: Array.from({ length: perTeam }, () => ''),
   }));
 }
 
@@ -87,8 +86,19 @@ function initialState(): GameState {
     songPaused: false,
     muted: false,
     loadingWord: false,
+    error: null,
     bestScore: null,
   };
+}
+
+function errorMessage(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  // Supabase/PostgREST errors are plain objects with a `message` property,
+  // not instances of Error — String(obj) on those just gives "[object Object]".
+  if (e && typeof e === 'object' && 'message' in e && typeof (e as { message: unknown }).message === 'string') {
+    return (e as { message: string }).message;
+  }
+  return String(e);
 }
 
 export function useGame() {
@@ -192,9 +202,7 @@ export function useGame() {
 
   const addPlayer = useCallback((teamIdx: number) => {
     const s = stateRef.current;
-    const used = new Set(s.draft.flatMap((t) => t.players));
-    const next = NAME_POOL.find((n) => !used.has(n)) ?? 'Player';
-    const draft = s.draft.map((t, i) => (i === teamIdx ? { ...t, players: [...t.players, next] } : t));
+    const draft = s.draft.map((t, i) => (i === teamIdx ? { ...t, players: [...t.players, ''] } : t));
     patch({ draft });
   }, [patch]);
 
@@ -237,7 +245,7 @@ export function useGame() {
   const startGame = useCallback(async () => {
     const s = stateRef.current;
     if (!s.mode) return;
-    patch({ loadingWord: true });
+    patch({ loadingWord: true, error: null });
     try {
       const gameId = await createGame(s.mode, s.turnSeconds, s.winType, s.winValue);
       const maxPlayers = Math.max(...s.draft.map((t) => t.players.length));
@@ -278,7 +286,7 @@ export function useGame() {
       });
     } catch (e) {
       console.error(e);
-      patch({ loadingWord: false });
+      patch({ loadingWord: false, error: `Couldn't start the game: ${errorMessage(e)}` });
     }
   }, [patch]);
 
@@ -349,7 +357,7 @@ export function useGame() {
       drawn = await drawNext(s.categoryKey);
     } catch (e) {
       console.error(e);
-      patch({ loadingWord: false });
+      patch({ loadingWord: false, error: `Couldn't get the next word: ${errorMessage(e)}` });
       return;
     }
 
@@ -357,7 +365,7 @@ export function useGame() {
     const willAllplay = allplayCheck.isAllplay && !isSong;
 
     if (willAllplay) {
-      patch({ allplayPlan: allplayCheck.updatedPlan, showAllplayAnnouncement: true, turnWordCount: count + 1, loadingWord: false, currentWord: drawn });
+      patch({ allplayPlan: allplayCheck.updatedPlan, showAllplayAnnouncement: true, turnWordCount: count + 1, loadingWord: false, error: null, currentWord: drawn });
       setTimeout(() => {
         patch((prev) => ({
           showAllplayAnnouncement: false,
@@ -379,6 +387,7 @@ export function useGame() {
       wordTimeLimit: 15,
       wordTimeLeft: 15,
       loadingWord: false,
+      error: null,
     });
   }, [patch]);
 
@@ -551,6 +560,7 @@ export function useGame() {
     confirmSummary,
     nextTurn,
     toggleMuted,
+    dismissError: () => patch({ error: null }),
   };
 }
 

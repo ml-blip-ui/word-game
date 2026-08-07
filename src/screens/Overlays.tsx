@@ -33,3 +33,34 @@ export function AllplayAnnouncementOverlay({ categoryColor }: { categoryColor: s
     </div>
   );
 }
+
+export function ErrorBanner({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        left: 14,
+        right: 14,
+        bottom: 14,
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 10,
+        padding: '14px 16px',
+        borderRadius: '16px 12px 15px 13px',
+        border: '2px solid var(--rust)',
+        background: 'var(--flag-bg)',
+        animation: 'fade-up 0.2s ease',
+      }}
+    >
+      <span style={{ flex: 1, fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 14, color: 'var(--ink)', lineHeight: 1.4 }}>{message}</span>
+      <button
+        onClick={onDismiss}
+        style={{ border: 'none', background: 'none', padding: 0, fontSize: 18, lineHeight: 1, color: 'var(--ink-muted)', cursor: 'pointer' }}
+        aria-label="Dismiss"
+      >
+        ×
+      </button>
+    </div>
+  );
+}

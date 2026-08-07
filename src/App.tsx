@@ -15,7 +15,7 @@ import { AllPlayScreen } from './screens/AllPlayScreen';
 import { SummaryScreen } from './screens/SummaryScreen';
 import { ScoreboardScreen } from './screens/ScoreboardScreen';
 import { LeaderboardScreen } from './screens/LeaderboardScreen';
-import { TokenAnnouncementOverlay, AllplayAnnouncementOverlay } from './screens/Overlays';
+import { TokenAnnouncementOverlay, AllplayAnnouncementOverlay, ErrorBanner } from './screens/Overlays';
 import { categoryMeta } from './lib/categories';
 
 export default function App() {
@@ -152,6 +152,7 @@ export default function App() {
         {content}
         {s.showTokenAnnouncement && currentTeam && <TokenAnnouncementOverlay teamName={currentTeam.name} teamColor={currentTeam.color} />}
         {s.showAllplayAnnouncement && s.categoryKey && <AllplayAnnouncementOverlay categoryColor={categoryMeta(s.categoryKey).color} />}
+        {s.error && <ErrorBanner message={s.error} onDismiss={g.dismissError} />}
       </div>
     </div>
   );

@@ -19,13 +19,21 @@ interface TeamsScreenProps {
 
 export function TeamsScreen({ mode, teamCount, draft, onBack, onSetTeamCount, onAddPlayer, onRemovePlayer, onRenamePlayer, onMovePlayer, onContinue }: TeamsScreenProps) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [autoFocusKey, setAutoFocusKey] = useState<string | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   useEffect(() => {
     fetchPlayerSuggestions().then(setSuggestions).catch(() => setSuggestions([]));
   }, []);
 
-  const canContinue = draft.every((t) => t.players.length >= 1) && draft.some((t) => t.players.length >= 1);
+  // A team needs at least one player, and every visible name must actually
+  // be typed in — an untouched blank row shouldn't silently count as "done".
+  const canContinue = draft.length > 0 && draft.every((t) => t.players.length >= 1 && t.players.every((p) => p.trim() !== ''));
+
+  const handleAddPlayer = (teamIdx: number) => {
+    setAutoFocusKey(`${teamIdx}-${draft[teamIdx].players.length}`);
+    onAddPlayer(teamIdx);
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -84,7 +92,15 @@ export function TeamsScreen({ mode, teamCount, draft, onBack, onSetTeamCount, on
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
           {draft.map((t, ti) => (
-            <TeamCard key={ti} team={t} teamIdx={ti} onAddPlayer={onAddPlayer} onRemovePlayer={onRemovePlayer} onRenamePlayer={onRenamePlayer} />
+            <TeamCard
+              key={ti}
+              team={t}
+              teamIdx={ti}
+              autoFocusKey={autoFocusKey}
+              onAddPlayer={handleAddPlayer}
+              onRemovePlayer={onRemovePlayer}
+              onRenamePlayer={onRenamePlayer}
+            />
           ))}
         </div>
       </DndContext>
@@ -99,12 +115,13 @@ export function TeamsScreen({ mode, teamCount, draft, onBack, onSetTeamCount, on
 interface TeamCardProps {
   team: DraftTeam;
   teamIdx: number;
+  autoFocusKey: string | null;
   onAddPlayer: (teamIdx: number) => void;
   onRemovePlayer: (teamIdx: number, playerIdx: number) => void;
   onRenamePlayer: (teamIdx: number, playerIdx: number, name: string) => void;
 }
 
-function TeamCard({ team, teamIdx, onAddPlayer, onRemovePlayer, onRenamePlayer }: TeamCardProps) {
+function TeamCard({ team, teamIdx, autoFocusKey, onAddPlayer, onRemovePlayer, onRenamePlayer }: TeamCardProps) {
   const { setNodeRef, isOver } = useDroppable({ id: `team-${teamIdx}`, data: { teamIdx } });
 
   return (
@@ -122,9 +139,18 @@ function TeamCard({ team, teamIdx, onAddPlayer, onRemovePlayer, onRenamePlayer }
       }}
     >
       <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 800, fontSize: 14, letterSpacing: '0.1em', textTransform: 'uppercase', color: team.color }}>{team.name}</span>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, minHeight: 40 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {team.players.map((p, pi) => (
-          <PlayerPill key={pi} teamIdx={teamIdx} playerIdx={pi} name={p} color={team.color} onRename={onRenamePlayer} onRemove={onRemovePlayer} />
+          <PlayerRow
+            key={pi}
+            teamIdx={teamIdx}
+            playerIdx={pi}
+            name={p}
+            color={team.color}
+            autoFocus={autoFocusKey === `${teamIdx}-${pi}`}
+            onRename={onRenamePlayer}
+            onRemove={onRemovePlayer}
+          />
         ))}
       </div>
       <button
@@ -148,51 +174,65 @@ function TeamCard({ team, teamIdx, onAddPlayer, onRemovePlayer, onRenamePlayer }
   );
 }
 
-interface PlayerPillProps {
+interface PlayerRowProps {
   teamIdx: number;
   playerIdx: number;
   name: string;
   color: string;
+  autoFocus: boolean;
   onRename: (teamIdx: number, playerIdx: number, name: string) => void;
   onRemove: (teamIdx: number, playerIdx: number) => void;
 }
 
-function PlayerPill({ teamIdx, playerIdx, name, color, onRename, onRemove }: PlayerPillProps) {
+function PlayerRow({ teamIdx, playerIdx, name, color, autoFocus, onRename, onRemove }: PlayerRowProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `pill-${teamIdx}-${playerIdx}`,
     data: { teamIdx, playerIdx },
   });
 
   return (
-    <span
+    <div
       ref={setNodeRef}
       style={{
-        display: 'inline-flex',
+        display: 'flex',
         alignItems: 'center',
-        gap: 4,
-        padding: '6px 6px 6px 4px',
-        borderRadius: 999,
-        border: `2px solid color-mix(in oklch, ${color} 65%, var(--ink))`,
-        background: isDragging ? 'var(--surface)' : `color-mix(in oklch, ${color} 14%, var(--surface))`,
+        gap: 8,
+        padding: '4px 6px 4px 8px',
+        borderRadius: '14px 10px 12px 11px',
+        border: `2px solid color-mix(in oklch, ${color} 55%, var(--ink))`,
+        background: isDragging ? 'var(--surface)' : `color-mix(in oklch, ${color} 12%, var(--surface))`,
         transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
         opacity: isDragging ? 0.6 : 1,
         zIndex: isDragging ? 10 : 'auto',
         position: 'relative',
       }}
     >
-      <span {...attributes} {...listeners} style={{ touchAction: 'none', cursor: 'grab', padding: '4px 2px', fontSize: 14, color: 'var(--ink-muted)', lineHeight: 1 }} aria-label="Drag to move between teams">
+      <span {...attributes} {...listeners} style={{ touchAction: 'none', cursor: 'grab', padding: '6px 2px', fontSize: 16, color: 'var(--ink-muted)', lineHeight: 1 }} aria-label="Drag to move between teams">
         ⠿
       </span>
       <input
         value={name}
         list="player-suggestions"
+        autoFocus={autoFocus}
+        placeholder="Player name"
         onChange={(e) => onRename(teamIdx, playerIdx, e.target.value)}
-        style={{ border: 'none', background: 'none', outline: 'none', width: `${Math.max(3, name.length)}ch`, fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 15, color: 'var(--ink)' }}
+        style={{
+          flex: 1,
+          minWidth: 0,
+          border: 'none',
+          background: 'none',
+          outline: 'none',
+          padding: '10px 4px',
+          fontFamily: 'var(--font-sans)',
+          fontWeight: 700,
+          fontSize: 16,
+          color: 'var(--ink)',
+        }}
       />
-      <button onClick={() => onRemove(teamIdx, playerIdx)} style={{ border: 'none', background: 'none', padding: '0 4px 0 0', fontSize: 16, lineHeight: 1, color: 'oklch(0.5 0.02 50)', cursor: 'pointer' }}>
+      <button onClick={() => onRemove(teamIdx, playerIdx)} style={{ border: 'none', background: 'none', padding: '6px 6px', fontSize: 18, lineHeight: 1, color: 'oklch(0.5 0.02 50)', cursor: 'pointer' }}>
         ×
       </button>
-    </span>
+    </div>
   );
 }
 

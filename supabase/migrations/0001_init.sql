@@ -47,7 +47,7 @@ declare
   v_exclude_count int;
   v_threshold timestamptz;
 begin
-  select count(*) into v_pool_size from words where category = p_category;
+  select count(*) into v_pool_size from words w where w.category = p_category;
   v_exclude_count := floor(v_pool_size * p_exclude_fraction);
 
   select w.last_used_at into v_threshold
