@@ -1,8 +1,11 @@
 -- Seed data generated from articulate_words_supabase.csv and articulate_song_list_revised.csv
--- Idempotent: safe to re-run (clears and reloads both tables).
+-- Safe to re-run on a fresh database. turn_events references words/songs by
+-- id, so truncating requires CASCADE — on a database that already has games
+-- logged, re-running this also wipes turn_events (game history), not just
+-- the word bank. Fine for first-time setup; know that before re-running
+-- later.
 
-truncate table words;
-truncate table songs;
+truncate table words, songs cascade;
 
 insert into words (category, prompt) values
 ('object', 'Pepperpot'),
