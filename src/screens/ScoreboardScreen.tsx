@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Mode, Team } from '../lib/types';
 import { TokenRow } from '../components/TokenIcon';
 
@@ -7,11 +8,14 @@ interface ScoreboardScreenProps {
   collaborativeScore: number;
   bestScore: number | null;
   gameOver: boolean;
+  endedEarly: boolean;
   settingsSummary: string;
   onNext: () => void;
+  onEndGame: () => void;
 }
 
-export function ScoreboardScreen({ mode, teams, collaborativeScore, bestScore, gameOver, settingsSummary, onNext }: ScoreboardScreenProps) {
+export function ScoreboardScreen({ mode, teams, collaborativeScore, bestScore, gameOver, endedEarly, settingsSummary, onNext, onEndGame }: ScoreboardScreenProps) {
+  const [confirmingEnd, setConfirmingEnd] = useState(false);
   const pooled = mode !== 'competitive';
   const soloOrPooledScore = mode === 'collaborative' ? collaborativeScore : teams[0]?.score ?? 0;
   const maxScore = Math.max(...teams.map((t) => t.score));
@@ -19,7 +23,9 @@ export function ScoreboardScreen({ mode, teams, collaborativeScore, bestScore, g
 
   let headline: string | null = null;
   if (gameOver) {
-    if (mode === 'competitive') {
+    if (endedEarly) {
+      headline = mode === 'competitive' && winners.length === 1 ? `Called it — ${winners[0].name} ahead` : 'Called it there';
+    } else if (mode === 'competitive') {
       headline = winners.length > 1 ? "It's a tie!" : `${winners[0].name} wins!`;
     } else if (bestScore !== null && soloOrPooledScore > bestScore) {
       headline = 'New best score!';
@@ -65,6 +71,36 @@ export function ScoreboardScreen({ mode, teams, collaborativeScore, bestScore, g
       >
         {gameOver ? 'New game' : 'Next turn'}
       </button>
+
+      {!gameOver &&
+        (confirmingEnd ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginTop: 4 }}>
+            <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 600, fontSize: 14, color: 'var(--ink-muted)', textAlign: 'center' }}>
+              End here and keep these scores?
+            </span>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={onEndGame}
+                style={{ padding: '12px 22px', borderRadius: '16px 12px 15px 13px', border: '2px solid var(--rust)', background: 'var(--rust)', color: 'var(--cream)', fontFamily: 'var(--font-sans)', fontWeight: 800, fontSize: 15, cursor: 'pointer' }}
+              >
+                End game
+              </button>
+              <button
+                onClick={() => setConfirmingEnd(false)}
+                style={{ padding: '12px 22px', borderRadius: '12px 16px 13px 15px', border: '2px solid oklch(0.3 0.03 50 / 0.4)', background: 'transparent', color: 'var(--ink)', fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}
+              >
+                Keep playing
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmingEnd(true)}
+            style={{ marginTop: 2, padding: 0, border: 'none', background: 'none', fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 14, color: 'var(--ink-muted)', cursor: 'pointer' }}
+          >
+            End game here
+          </button>
+        ))}
     </div>
   );
 }

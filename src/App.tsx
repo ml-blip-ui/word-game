@@ -137,8 +137,10 @@ export default function App() {
             collaborativeScore={s.collaborativeScore}
             bestScore={s.bestScore}
             gameOver={g.gameOver}
+            endedEarly={s.endedEarly}
             settingsSummary={settingsSummary}
             onNext={g.nextTurn}
+            onEndGame={g.endGameEarly}
           />
         );
         break;

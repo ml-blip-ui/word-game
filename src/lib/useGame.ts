@@ -68,6 +68,7 @@ function initialState(): GameState {
     totalTurnsPlayed: 0,
     collaborativeScore: 0,
     gameStartedAt: null,
+    endedEarly: false,
     categoryKey: null,
     wheelRotationDeg: 0,
     wheelSpinning: false,
@@ -500,9 +501,25 @@ export function useGame() {
     }
   }, [patch]);
 
+  // Calling it quits mid-game. The scores stand and are written to the
+  // database as a finished game, but no best score is recorded: best scores
+  // are keyed to the settings that produced them, and a game abandoned
+  // halfway through those settings isn't a fair comparison against one
+  // played out in full.
+  const endGameEarly = useCallback(async () => {
+    const s = stateRef.current;
+    patch({ endedEarly: true, screen: 'scoreboard' });
+    if (!s.gameId) return;
+    try {
+      await finishGame(s.gameId, s.teams.map((t) => ({ gameTeamId: t.gameTeamId, score: t.score })));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [patch]);
+
   const nextTurn = useCallback(() => {
     const s = stateRef.current;
-    if (isGameOver(s)) {
+    if (isGameOver(s) || s.endedEarly) {
       patch({ ...initialState(), muted: s.muted, screen: 'chooseGroup' });
       return;
     }
@@ -528,7 +545,7 @@ export function useGame() {
 
   const toggleMuted = useCallback(() => patch((prev) => ({ muted: !prev.muted })), [patch]);
 
-  const gameOver = isGameOver(state);
+  const gameOver = isGameOver(state) || state.endedEarly;
   const conditionMet = winConditionMet(state);
 
   return {
@@ -558,6 +575,7 @@ export function useGame() {
     handleAllplayCorrect,
     toggleFlag,
     confirmSummary,
+    endGameEarly,
     nextTurn,
     toggleMuted,
     dismissError: () => patch({ error: null }),

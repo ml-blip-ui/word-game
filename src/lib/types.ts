@@ -81,6 +81,7 @@ export interface GameState {
   collaborativeScore: number;
 
   gameStartedAt: number | null;
+  endedEarly: boolean;
 
   categoryKey: CategoryKey | null;
   wheelRotationDeg: number;
