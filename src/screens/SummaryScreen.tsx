@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { categoryMeta } from '../lib/categories';
 import type { Team, TurnWordEntry } from '../lib/types';
 
@@ -16,8 +17,24 @@ const OUTCOME_META: Record<TurnWordEntry['outcome'], [string, string]> = {
 };
 
 export function SummaryScreen({ team, turnWords, onToggleFlag, onToggleReport, onConfirm }: SummaryScreenProps) {
+  // Index of the row awaiting a "really report this?" answer. Only asked
+  // when raising a report — clearing one you tapped by mistake shouldn't
+  // itself need confirming.
+  const [confirmingIndex, setConfirmingIndex] = useState<number | null>(null);
+  const pending = confirmingIndex === null ? null : turnWords[confirmingIndex];
+
+  const handleFlagPress = (i: number) => {
+    if (turnWords[i].reported) onToggleReport(i);
+    else setConfirmingIndex(i);
+  };
+
+  const confirmReport = () => {
+    if (confirmingIndex !== null) onToggleReport(confirmingIndex);
+    setConfirmingIndex(null);
+  };
+
   return (
-    <div className="screen" style={{ padding: '28px 22px', gap: 14 }}>
+    <div className="screen" style={{ padding: '28px 22px', gap: 14, position: 'relative' }}>
       <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 800, fontSize: 14, letterSpacing: '0.14em', textTransform: 'uppercase', color: team.color }}>Turn summary — {team.name}</div>
       <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14, color: 'var(--ink-muted)', marginTop: -8, lineHeight: 1.45 }}>
         Tap a word to flag a slip. Tap ⚑ to report a word as impossible.
@@ -83,7 +100,7 @@ export function SummaryScreen({ team, turnWords, onToggleFlag, onToggleReport, o
                 </span>
               </button>
               <button
-                onClick={() => onToggleReport(i)}
+                onClick={() => handleFlagPress(i)}
                 title={w.reported ? 'Reported as impossible — tap to undo' : 'Report this word as impossible'}
                 aria-label={w.reported ? 'Undo report' : 'Report word as impossible'}
                 aria-pressed={w.reported}
@@ -113,6 +130,87 @@ export function SummaryScreen({ team, turnWords, onToggleFlag, onToggleReport, o
       >
         Confirm and continue
       </button>
+
+      {pending && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 45,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 26,
+            background: 'oklch(0.3 0.03 50 / 0.6)',
+            animation: 'fade-up 0.15s ease',
+          }}
+          onClick={() => setConfirmingIndex(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 16,
+              width: '100%',
+              maxWidth: 300,
+              padding: '26px 24px',
+              borderRadius: '24px 18px 26px 20px',
+              border: '2.2px solid var(--ink)',
+              background: 'var(--bg)',
+              textAlign: 'center',
+            }}
+          >
+            <span style={{ fontSize: 26, lineHeight: 1, color: 'var(--cat-person)' }}>⚑</span>
+            <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 700, fontSize: 16, color: 'var(--ink)', lineHeight: 1.4 }}>
+              Report this as an impossible word?
+            </span>
+            <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: 20, color: 'var(--ink)', overflowWrap: 'anywhere' }}>{pending.text}</span>
+            <span style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 13, color: 'var(--ink-muted)', lineHeight: 1.4 }}>
+              It'll be added to the list for removal. Scores aren't affected.
+            </span>
+            <div style={{ display: 'flex', gap: 10, width: '100%', marginTop: 2 }}>
+              <button
+                onClick={confirmReport}
+                style={{
+                  flex: 1,
+                  padding: '15px 0',
+                  borderRadius: '18px 13px 16px 14px',
+                  border: '2.2px solid var(--ink)',
+                  background: 'var(--cat-person)',
+                  color: 'var(--cream)',
+                  fontFamily: 'var(--font-sans)',
+                  fontWeight: 800,
+                  fontSize: 16,
+                  cursor: 'pointer',
+                }}
+              >
+                Yes, report
+              </button>
+              <button
+                onClick={() => setConfirmingIndex(null)}
+                style={{
+                  flex: 1,
+                  padding: '15px 0',
+                  borderRadius: '13px 18px 14px 16px',
+                  border: '2.2px solid var(--ink)',
+                  background: 'transparent',
+                  color: 'var(--ink)',
+                  fontFamily: 'var(--font-sans)',
+                  fontWeight: 700,
+                  fontSize: 16,
+                  cursor: 'pointer',
+                }}
+              >
+                No
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
