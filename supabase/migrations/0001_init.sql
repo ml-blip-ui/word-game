@@ -68,7 +68,10 @@ begin
   )
   returning w.id, w.prompt, w.category;
 end;
-$$ language plpgsql volatile;
+-- SECURITY DEFINER: the update stamping last_used_at must bypass RLS
+-- (words only has a SELECT policy for anon; a security-invoker function
+-- would silently update zero rows and return an empty draw).
+$$ language plpgsql volatile security definer set search_path = public;
 
 create or replace function draw_song(p_exclude_fraction real default 0.2)
 returns table (id uuid, title text, artist text) as $$
@@ -97,7 +100,7 @@ begin
   )
   returning s.id, s.title, s.artist;
 end;
-$$ language plpgsql volatile;
+$$ language plpgsql volatile security definer set search_path = public;
 
 -- ---------------------------------------------------------------------------
 -- Players and persistence (spec §11)
