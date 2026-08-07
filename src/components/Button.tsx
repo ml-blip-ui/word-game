@@ -13,7 +13,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 // corner so nothing reads as stamped from the same die (design spec §3.5).
 export function Button({
   variant = 'filled',
-  color = 'var(--ink)',
+  color = 'var(--gradient-primary)',
   textColor,
   corners = '20px 15px 22px 16px',
   fontSize = 18,

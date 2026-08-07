@@ -10,22 +10,27 @@
   --ink-muted: oklch(0.45 0.02 50);
   --cream: oklch(0.97 0.014 80);
   --cream-bright: oklch(0.99 0.01 80);
-  --rust: oklch(0.55 0.12 45);
+  --rust: oklch(0.55 0.15 45);
   --flag-bg: oklch(0.92 0.025 40);
 
-  /* Category colours */
-  --cat-world: oklch(0.55 0.09 195);
-  --cat-object: oklch(0.64 0.12 75);
-  --cat-nature: oklch(0.55 0.09 125);
-  --cat-person: oklch(0.6 0.1 15);
-  --cat-action: oklch(0.55 0.12 45);
-  --cat-random: oklch(0.52 0.07 255);
+  /* Category colours — chroma nudged up from the original spec values;
+     still muted by design, just not flat. */
+  --cat-world: oklch(0.55 0.105 195);
+  --cat-object: oklch(0.64 0.14 75);
+  --cat-nature: oklch(0.55 0.105 125);
+  --cat-person: oklch(0.6 0.12 15);
+  --cat-action: oklch(0.55 0.15 45);
+  --cat-random: oklch(0.52 0.09 255);
 
   /* Team colours: hue gaps the categories leave empty, a shade deeper */
-  --team-1: oklch(0.47 0.085 160);
-  --team-2: oklch(0.47 0.085 290);
-  --team-3: oklch(0.47 0.085 225);
-  --team-4: oklch(0.47 0.085 350);
+  --team-1: oklch(0.47 0.1 160);
+  --team-2: oklch(0.47 0.1 290);
+  --team-3: oklch(0.47 0.1 225);
+  --team-4: oklch(0.47 0.1 350);
+
+  /* Primary CTA treatment — a touch more festive than a flat fill for the
+     buttons that repeat throughout setup (Continue, Enter, Create group). */
+  --gradient-primary: linear-gradient(135deg, oklch(0.58 0.16 45) 0%, oklch(0.56 0.14 15) 55%, oklch(0.52 0.13 340) 100%);
 
   --font-serif: 'Corben', serif;
   --font-sans: 'Manrope', sans-serif;
