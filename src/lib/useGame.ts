@@ -309,7 +309,17 @@ export function useGame() {
     const idx = Math.floor(Math.random() * CATEGORIES.length);
     const seg = 360 / CATEGORIES.length;
     const jitter = (Math.random() - 0.5) * (seg * 0.5);
-    const target = s.wheelRotationDeg + 5 * 360 + (360 - idx * seg) + jitter;
+    // The disc's resting angle carries over between turns (nextTurn keeps
+    // rotation % 360 so the wheel doesn't visibly snap back), so the target
+    // must be computed relative to where the disc actually is. Adding a
+    // fixed "360 - idx*seg" to a non-zero starting angle — as the handoff
+    // prototype did — landed the pointer on the wrong segment from the
+    // second spin of a game onward: the wheel showed one category while the
+    // game played another.
+    const currentMod = ((s.wheelRotationDeg % 360) + 360) % 360;
+    const desired = (((360 - idx * seg + jitter) % 360) + 360) % 360;
+    const delta = (((desired - currentMod) % 360) + 360) % 360;
+    const target = s.wheelRotationDeg + 5 * 360 + delta;
     patch({ wheelSpinning: true, wheelRotationDeg: target });
     setTimeout(() => {
       patch({ wheelSpinning: false, categoryKey: CATEGORIES[idx].key, screen: 'token' });
