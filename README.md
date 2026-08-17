@@ -59,6 +59,27 @@ however the group split last time. Deliberately no group-level scoreboard —
 kept to roster + last split only, to avoid turning a holiday game into a
 running competition.
 
+## How the wheel picks a category
+
+The wheel lands on exactly the category that gets played — always. What's
+shaped is *which* category comes up, replacing an independent uniform roll
+with a sequence that feels fair as well as being fair:
+
+1. **Bag rule** — categories are dealt from a shuffled bag holding one of
+   each, so no category recurs until all six have come up.
+2. **Player spacing** — a player shouldn't get the same category more than
+   one turn in three of their own, so the categories from their last two
+   turns are excluded where possible.
+
+These occasionally conflict: the bag can run down to only categories that
+are blocked for whoever's turn it is. The bag rule wins, because it's the
+one the whole room can see on the wheel, and the spacing rule degrades to
+"of the blocked options, whichever that player saw longest ago".
+
+Verify with `npm run test:categories` (bag rule, spacing rates by team
+shape, and a plain-random control) and `npm run test:wheel` (spin geometry
+and pointer honesty).
+
 ## Curating the word bank
 
 The turn summary has a ⚑ button on every word. That reports the word as

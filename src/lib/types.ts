@@ -94,6 +94,10 @@ export interface GameState {
   categoryKey: CategoryKey | null;
   wheelRotationDeg: number;
   wheelSpinning: boolean;
+  /** Categories not yet dealt in the current cycle (see categorySequence). */
+  categoryBag: CategoryKey[];
+  /** playerId -> their recent categories, most recent first. */
+  playerRecentCategories: Record<string, CategoryKey[]>;
 
   tokenSpentThisTurn: boolean;
   showTokenAnnouncement: boolean;

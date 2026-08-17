@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CategoryKey } from './categories';
-import { CATEGORIES, TEAM_COLORS } from './categories';
+import { ALL_CATEGORY_KEYS, CATEGORIES, TEAM_COLORS } from './categories';
 import type { DraftTeam, GameState, Mode, Team, TurnWordEntry, WinType } from './types';
 import { drawNext } from './wordDraw';
 import { planAllplay, checkAllplay } from './allplay';
 import { isGameOver } from './winConditions';
-import { planSpin } from './wheel';
+import { planSpinTo } from './wheel';
+import { pickCategory, rememberCategory } from './categorySequence';
 import { playCorrect, playSkip, playTokenSpent, playTurnExpired } from './sound';
 import {
   createGame,
@@ -76,6 +77,8 @@ function initialState(): GameState {
     categoryKey: null,
     wheelRotationDeg: 0,
     wheelSpinning: false,
+    categoryBag: [],
+    playerRecentCategories: {},
     tokenSpentThisTurn: false,
     showTokenAnnouncement: false,
     showAllplayAnnouncement: false,
@@ -293,6 +296,9 @@ export function useGame() {
         gameStartedAt: Date.now(),
         bestScore,
         loadingWord: false,
+        // Fresh cycle and fresh per-player history for each new game.
+        categoryBag: [],
+        playerRecentCategories: {},
       });
     } catch (e) {
       console.error(e);
@@ -307,10 +313,26 @@ export function useGame() {
   const spinWheel = useCallback(() => {
     const s = stateRef.current;
     if (s.wheelSpinning) return;
-    const { idx, targetDeg } = planSpin(s.wheelRotationDeg, CATEGORIES.length);
-    patch({ wheelSpinning: true, wheelRotationDeg: targetDeg });
+
+    const team = s.teams[s.currentTeamIdx];
+    const playerId = team?.players[team.playerIdx]?.playerId ?? '';
+    const recent = s.playerRecentCategories[playerId] ?? [];
+
+    const { key, bag } = pickCategory({ bag: s.categoryBag, allKeys: ALL_CATEGORY_KEYS, recent });
+    const idx = CATEGORIES.findIndex((c) => c.key === key);
+    const targetDeg = planSpinTo(s.wheelRotationDeg, idx, CATEGORIES.length);
+
+    // The bag and the player's history advance now rather than when the
+    // animation finishes, so an interrupted spin can't deal the same
+    // category twice.
+    patch({
+      wheelSpinning: true,
+      wheelRotationDeg: targetDeg,
+      categoryBag: bag,
+      playerRecentCategories: { ...s.playerRecentCategories, [playerId]: rememberCategory(recent, key) },
+    });
     setTimeout(() => {
-      patch({ wheelSpinning: false, categoryKey: CATEGORIES[idx].key, screen: 'token' });
+      patch({ wheelSpinning: false, categoryKey: key, screen: 'token' });
     }, 2900);
   }, [patch]);
 

@@ -18,6 +18,9 @@ export const CATEGORIES: readonly CategoryMeta[] = [
   { key: 'random', label: 'Random', color: 'var(--cat-random)' },
 ];
 
+/** Every key the wheel can land on, in wheel order. */
+export const ALL_CATEGORY_KEYS: readonly CategoryKey[] = CATEGORIES.map((c) => c.key);
+
 export function categoryMeta(key: CategoryKey): CategoryMeta {
   const found = CATEGORIES.find((c) => c.key === key);
   if (!found) throw new Error(`Unknown category ${key}`);

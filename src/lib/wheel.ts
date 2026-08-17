@@ -19,21 +19,28 @@ export const SPIN_TURNS = 5;
 export const JITTER_FRACTION = 0.5;
 
 /**
- * Plans a spin from the disc's *current* angle. The resting angle carries
- * over between turns, so the rotation to apply has to be computed as a
- * delta from where the disc actually is — adding a fixed absolute offset to
- * a non-zero starting angle lands the pointer on the wrong segment.
+ * Rotation needed to land the pointer on a given segment, starting from the
+ * disc's *current* angle. The resting angle carries over between turns, so
+ * this has to be a delta from where the disc actually is — adding a fixed
+ * absolute offset to a non-zero starting angle lands the pointer on the
+ * wrong segment.
  */
-export function planSpin(currentRotationDeg: number, categoryCount: number, rng: () => number = Math.random): SpinPlan {
+export function planSpinTo(currentRotationDeg: number, idx: number, categoryCount: number, rng: () => number = Math.random): number {
   const seg = 360 / categoryCount;
-  const idx = Math.floor(rng() * categoryCount);
   const jitter = (rng() - 0.5) * (seg * JITTER_FRACTION);
 
   const currentMod = norm360(currentRotationDeg);
   const desired = norm360(-idx * seg + jitter);
   const delta = norm360(desired - currentMod);
 
-  return { idx, targetDeg: currentRotationDeg + SPIN_TURNS * 360 + delta };
+  return currentRotationDeg + SPIN_TURNS * 360 + delta;
+}
+
+/** Uniform-random spin. Retained for the distribution harness, which
+ *  compares the sequenced draw against a plain independent roll. */
+export function planSpin(currentRotationDeg: number, categoryCount: number, rng: () => number = Math.random): SpinPlan {
+  const idx = Math.floor(rng() * categoryCount);
+  return { idx, targetDeg: planSpinTo(currentRotationDeg, idx, categoryCount, rng) };
 }
 
 /**
