@@ -32,10 +32,12 @@ import {
 export const WORD_SECONDS = 20;
 
 /**
- * Shorter during an all-play, where the whole room is guessing rather than
- * one team, so a word falls much faster.
+ * All-play words get the same 20 seconds. The original spec shortened them
+ * on the grounds that the whole room is guessing, but in play that made
+ * all-plays punishingly fast, so the limit is deliberately uniform. Kept as
+ * its own constant so the two can be tuned apart again if wanted.
  */
-export const ALLPLAY_WORD_SECONDS = 10;
+export const ALLPLAY_WORD_SECONDS = 20;
 
 // Teams start with blank entries, not placeholder names — a fake "Sarah"
 // sitting in an input reads as pre-filled data rather than a prompt to type.
