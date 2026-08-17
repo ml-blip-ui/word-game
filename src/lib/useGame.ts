@@ -25,6 +25,18 @@ import {
   type GroupRoster,
 } from './persistence';
 
+/**
+ * Seconds a word stays on screen before it is automatically skipped with the
+ * full skip penalty (gameplay spec §6).
+ */
+export const WORD_SECONDS = 20;
+
+/**
+ * Shorter during an all-play, where the whole room is guessing rather than
+ * one team, so a word falls much faster.
+ */
+export const ALLPLAY_WORD_SECONDS = 10;
+
 // Teams start with blank entries, not placeholder names — a fake "Sarah"
 // sitting in an input reads as pre-filled data rather than a prompt to type.
 function buildDraft(teamCount: number, perTeam: number): DraftTeam[] {
@@ -84,8 +96,8 @@ function initialState(): GameState {
     showAllplayAnnouncement: false,
     turnTimeLeft: 90,
     turnExpired: false,
-    wordTimeLeft: 15,
-    wordTimeLimit: 15,
+    wordTimeLeft: WORD_SECONDS,
+    wordTimeLimit: WORD_SECONDS,
     turnWords: [],
     turnWordCount: 0,
     allplayWordsInOccurrence: 0,
@@ -428,8 +440,8 @@ export function useGame() {
           turnWordCount: count + 1,
           screen: 'song',
           songPaused: true,
-          wordTimeLimit: 15,
-          wordTimeLeft: 15,
+          wordTimeLimit: WORD_SECONDS,
+          wordTimeLeft: WORD_SECONDS,
           loadingWord: false,
           error: null,
         });
@@ -441,8 +453,8 @@ export function useGame() {
         turnWordCount: count + 1,
         screen: 'allplay',
         allplayWordsInOccurrence: s.allplayWordsInOccurrence + 1,
-        wordTimeLimit: 10,
-        wordTimeLeft: 10,
+        wordTimeLimit: ALLPLAY_WORD_SECONDS,
+        wordTimeLeft: ALLPLAY_WORD_SECONDS,
         loadingWord: false,
         error: null,
       });
@@ -461,8 +473,8 @@ export function useGame() {
         currentWord: drawn,
         turnWordCount: count + 1,
         allplayWordsInOccurrence: 1,
-        wordTimeLimit: 10,
-        wordTimeLeft: 10,
+        wordTimeLimit: ALLPLAY_WORD_SECONDS,
+        wordTimeLeft: ALLPLAY_WORD_SECONDS,
         loadingWord: false,
         error: null,
       });
@@ -478,8 +490,8 @@ export function useGame() {
       turnWordCount: count + 1,
       screen: isSong ? 'song' : 'play',
       songPaused: isSong,
-      wordTimeLimit: 15,
-      wordTimeLeft: 15,
+      wordTimeLimit: WORD_SECONDS,
+      wordTimeLeft: WORD_SECONDS,
       loadingWord: false,
       error: null,
     });
