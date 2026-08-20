@@ -23,6 +23,12 @@ export function SummaryScreen({ team, turnWords, onToggleFlag, onToggleReport, o
   const [confirmingIndex, setConfirmingIndex] = useState<number | null>(null);
   const pending = confirmingIndex === null ? null : turnWords[confirmingIndex];
 
+  // A flagged word was said out loud, so it no longer counts as "got" —
+  // it's called out separately.
+  const flaggedCount = turnWords.filter((w) => w.flagged).length;
+  const gotCount = turnWords.filter((w) => w.outcome === 'correct' && !w.flagged).length;
+  const skippedCount = turnWords.filter((w) => w.outcome !== 'correct').length;
+
   const handleFlagPress = (i: number) => {
     if (turnWords[i].reported) onToggleReport(i);
     else setConfirmingIndex(i);
@@ -36,7 +42,40 @@ export function SummaryScreen({ team, turnWords, onToggleFlag, onToggleReport, o
   return (
     <div className="screen" style={{ padding: '28px 22px', gap: 14, position: 'relative' }}>
       <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 800, fontSize: 14, letterSpacing: '0.14em', textTransform: 'uppercase', color: team.color }}>Turn summary — {team.name}</div>
-      <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14, color: 'var(--ink-muted)', marginTop: -8, lineHeight: 1.45 }}>
+
+      {/* Headline tally. Counts, not points — the running points total is
+          on the scoreboard; this is "how did that turn go". */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          gap: 8,
+          padding: '14px 16px',
+          borderRadius: '18px 14px 20px 15px',
+          border: '2px solid oklch(0.3 0.03 50 / 0.3)',
+          background: 'var(--surface)',
+          fontFamily: 'var(--font-sans)',
+          fontWeight: 600,
+          fontSize: 16,
+          color: 'var(--ink-muted)',
+        }}
+      >
+        <span>You got</span>
+        <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: 30, lineHeight: 1, color: 'var(--cat-nature)' }}>{gotCount}</span>
+        <span>and skipped</span>
+        <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: 30, lineHeight: 1, color: 'var(--cat-person)' }}>{skippedCount}</span>
+        {flaggedCount > 0 && (
+          <>
+            <span>·</span>
+            <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: 30, lineHeight: 1, color: 'var(--rust)' }}>{flaggedCount}</span>
+            <span>flagged</span>
+          </>
+        )}
+      </div>
+
+      <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 14, color: 'var(--ink-muted)', marginTop: -4, lineHeight: 1.45 }}>
         Tap a word to flag a slip. Tap ⚑ to report a word as impossible.
       </div>
       <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 9, marginTop: 4, minHeight: 0 }}>

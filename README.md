@@ -15,7 +15,7 @@ intent — they're the source of truth for *why* things work the way they do.
 2. Open **SQL Editor** and run, in order:
    - `supabase/migrations/0001_init.sql` — tables, RPC functions, RLS policies, the stats view.
    - `supabase/migrations/0002_groups.sql` — groups (persistent named rosters, e.g. "Grups and Chiddlers").
-   - `supabase/migrations/0003_fix_draw_word.sql`, `0004_security_definer_draws.sql`, `0005_word_reports.sql` — fixes and the reported-words table.
+   - `supabase/migrations/0003_fix_draw_word.sql`, `0004_security_definer_draws.sql`, `0005_word_reports.sql`, `0006_fix_repetition_protection.sql` — fixes and the reported-words table.
    - `supabase/seed/seed_data.sql` — loads the ~7,500 words and 800 songs.
 3. Under **Project Settings → API**, copy the **Project URL** and **anon / publishable** key.
 
@@ -79,6 +79,29 @@ one the whole room can see on the wheel, and the spacing rule degrades to
 Verify with `npm run test:categories` (bag rule, spacing rates by team
 shape, and a plain-random control) and `npm run test:wheel` (spin geometry
 and pointer honesty).
+
+## Word repetition
+
+The reason the project exists, so it gets the strongest guarantee available:
+a word is never drawn again until **every other word in its category has
+been used**. `draw_word` prefers never-used words (`last_used_at is null`)
+at random among themselves, and only once a category is exhausted does it
+fall back to drawing from outside the most-recently-used 20%.
+
+At roughly 17 words per category per game, that's about **88 games before a
+repeat is even possible**. `npm run test:repetition` models it.
+
+To see how much of the bank has been used:
+
+```sql
+select category,
+       count(*) filter (where last_used_at is null) as unused,
+       count(*) as total
+from words group by category order by category;
+```
+
+Resetting a category (or the whole bank) to fully unused is just
+`update words set last_used_at = null;`.
 
 ## Curating the word bank
 

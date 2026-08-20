@@ -1,5 +1,7 @@
+import { useEffect, useRef, useState } from 'react';
 import type { Team } from '../lib/types';
 import { TokenRow } from '../components/TokenIcon';
+import { fitSize } from '../lib/wordSize';
 
 interface HandoverScreenProps {
   team: Team;
@@ -10,10 +12,31 @@ export function HandoverScreen({ team, onReady }: HandoverScreenProps) {
   const playerName = team.players[team.playerIdx]?.name ?? '';
   const tokensLeft = team.totalTokens - team.tokensSpent;
 
+  // A fixed 56px overflowed the phone on longer names (Sharminee), so the
+  // name is measured against the space it actually has, same as the word
+  // during play.
+  const nameRef = useRef<HTMLDivElement>(null);
+  const [nameFontSize, setNameFontSize] = useState(56);
+
+  useEffect(() => {
+    const el = nameRef.current;
+    if (!el) return;
+    const update = () => setNameFontSize(fitSize(playerName, 56, el.clientWidth));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [playerName]);
+
   return (
     <div className="screen" style={{ alignItems: 'center', justifyContent: 'center', gap: 26, padding: 32, textAlign: 'center' }}>
       <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 800, fontSize: 15, letterSpacing: '0.16em', textTransform: 'uppercase', color: team.color }}>{team.name}</div>
-      <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: 56, lineHeight: 1.05, color: 'var(--ink)' }}>{playerName}</div>
+      <div
+        ref={nameRef}
+        style={{ width: '100%', fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: nameFontSize, lineHeight: 1.05, color: 'var(--ink)', overflowWrap: 'normal' }}
+      >
+        {playerName}
+      </div>
       <div style={{ fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 17, color: 'oklch(0.4 0.02 50)', maxWidth: 280 }}>Give the phone to {playerName}.</div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginTop: 6 }}>
         <TokenRow total={team.totalTokens} spent={team.tokensSpent} color={team.color} size={46} />
